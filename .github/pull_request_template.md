@@ -13,6 +13,12 @@
 <!-- Contexte fonctionnel ou technique nécessaire à la revue. -->
 <!-- Lien(s) vers issue(s), discussion(s), doc(s). -->
 
+## Description
+<!-- Décrivez les changements effectués dans cette PR -->
+
+## Related Issues
+<!-- Mentionnez les issues liées à cette PR, par exemple : Closes #123 -->
+
 ## Changements
 -
 
@@ -35,6 +41,15 @@
 - [ ] Tests d’intégration
 - [ ] Tests manuels
 - [ ] Non applicable (à justifier)
+
+## Testing Done
+<!-- Décrivez les tests effectués pour valider cette PR -->
+
+## Checklist
+- [ ] Le code suit les conventions de style.
+- [ ] Les tests unitaires ont été ajoutés/modifiés si nécessaire.
+- [ ] La documentation a été mise à jour si nécessaire.
+- [ ] Toutes les dépendances sont à jour.
 
 ## Points d’attention pour la review
 <!-- Parties sensibles du code, dette technique introduite, risques. -->

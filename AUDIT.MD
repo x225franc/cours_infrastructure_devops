@@ -185,3 +185,26 @@ Short-term fix: Analyser les dépendances avec Trivy et npm audit, et corriger l
 Long-term solution: Mettre en place une analyse régulière des vulnérabilités dans le pipeline CI/CD.
 Tools/technologies: Trivy, npm audit.
 
+---
+
+# Advanced Git 
+
+### Branch Protection
+Pour setup branch protections sur la main branch 
+
+cours_infrastructure_devops > settings > Branches > Add rule > Ruleset name : main > 
+- Require PR reviews
+- Require status checks to pass
+- Require signed commits
+
+### PR Template
+Dans le repo , on peut ajouter un template de PR pour standardiser les informations fournies lors de la création d'une pull request.
+
+.github/pull_request_template.md
+
+### Conflict Simulation
+
+- creation d'une branche feature depuis main par exemple feature-branch
+- puis on met des modifs dans un fichier par exemple conflit.md et on push la branche feature-branch
+- je reviens sur la main et je fais une modif dans le meme fichier conflit.md et je push la main branch
+- ensuite je tente de merger la branche feature-branch dans main et je rencontre un conflit
