@@ -209,3 +209,21 @@ Dans le repo , on peut ajouter un template de PR pour standardiser les informati
 - je reviens sur la main et je fais une modif dans le meme fichier conflit.md et je push la main branch
 - ensuite je tente de merger la branche feature-branch dans main et je rencontre un conflit
 - on resoud le conflit avec le merge editor de vscode / github en choisissant les modifications à garder et en supprimant les marqueurs de conflit
+
+---
+
+# CI/CD Pipeline Creation
+
+### CI
+
+- on cree un ficher ci.yml dans .github/workflows/ pour github actions
+- a l'interieur on y rajoute la config par stage : 
+   - Installation de dépendances
+   - Exécution des tests
+   - Exécution du linter
+   - Exécution de l'analyse de sécurité
+   - Construction de l'image Docker
+   - Et push de l'image vers le registry (uniquement sur la branche main)
+
+### Testing the Pipeline
+- on casse intentionnellement un test pour vérifier que le pipeline le détecte
