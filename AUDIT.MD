@@ -223,7 +223,10 @@ Dans le repo , on peut ajouter un template de PR pour standardiser les informati
    - Exécution du linter
    - Exécution de l'analyse de sécurité
    - Construction de l'image Docker
-   - Et push de l'image vers le registry (uniquement sur la branche main)
+   - Et push de l'image vers le registry (uniquement sur la branche main , doit etre parametrer 
+   dans github > settings > secrets > new repository secret > REGISTRY_URL, REGISTRY_USERNAME et REGISTRY_PASSWORD)
 
 ### Testing the Pipeline
 - on casse intentionnellement un test pour vérifier que le pipeline le détecte
+- ensuite on corrige le test et on vérifie que le pipeline passe
+- enfin on ajoute un badge de CI dans le README pour afficher l'état du pipeline

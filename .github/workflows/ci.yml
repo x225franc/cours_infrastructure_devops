@@ -12,30 +12,118 @@ jobs:
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
-            - name: Install dependencies
-              run: npm ci
+            - name: Install frontend dependencies
+              working-directory: ./frontend
+              run: npm install
 
-            - name: Run tests
-              run: npm test
+            - name: Auto-format and lint frontend code
+              working-directory: ./frontend
+              run: npm run check
 
-            - name: Run linter
-              run: npm run lint
+            - name: Run frontend tests
+              working-directory: ./frontend
+              run: npm run test:unit
 
-            - name: Run security scan
+            - name: Run frontend security audit
+              working-directory: ./frontend
+              run: npm audit --json > npm-audit-report.json
+
+            - name: Fail on critical frontend vulnerabilities
+              working-directory: ./frontend
               run: npm audit --audit-level=high
 
-            - name: Build Docker image
-              run: docker build -t myapp:latest .
+            - name: Setup Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: '3.11'
 
-            - name: Push to registry
-              if: github.ref == 'refs/heads/main'
+            - name: Install uv
+              run: pip install uv
+
+            - name: Install backend dependencies
+              working-directory: ./backend
+              run: uv sync --extra dev
+
+            - name: Auto-format backend code with ruff
+              working-directory: ./backend
+              run: uv run ruff format .
+
+            - name: Run backend tests with coverage
+              working-directory: ./backend
+              run: uv run pytest --cov=weather --cov-report=json --cov-report=html --junit-xml=test-report.xml
+
+            - name: Run backend linter (ruff)
+              working-directory: ./backend
+              run: uv run ruff check . --output-format=json > ruff-report.json || true
+
+            - name: Run flake8 analysis
+              working-directory: ./backend
+              run: uv run flake8 . --format json --output-file=flake8-report.json || true
+
+            - name: Install pre-commit
+              run: pip install pre-commit
+
+            - name: Run pre-commit checks
+              run: pre-commit run --all-files
+
+            - name: Run Trivy filesystem scan
+              run: trivy fs . --format json --output trivy-report.json --severity CRITICAL,HIGH
+              continue-on-error: true
+
+            - name: Check Trivy for critical vulnerabilities
+              run: |
+                  CRITICAL=$(trivy fs . --format json --severity CRITICAL | grep -c '"Severity":"CRITICAL"' || echo 0)
+                  if [ "$CRITICAL" -gt 0 ]; then
+                    echo "Critical vulnerabilities found!"
+                    exit 1
+                  fi
+              continue-on-error: true
+            - name: Check Docker credentials
+              id: check_credentials
+              run: |
+                  if [ -z "${{ secrets.REGISTRY_URL }}" ] || [ -z "${{ secrets.REGISTRY_USER }}" ] || [ -z "${{ secrets.REGISTRY_PASSWORD }}" ]; then
+                    echo "has_credentials=false" >> $GITHUB_OUTPUT
+                  else
+                    echo "has_credentials=true" >> $GITHUB_OUTPUT
+                  fi
+              shell: bash
+
+            - name: Build backend Docker image
+              if: steps.check_credentials.outputs.has_credentials == 'true'
+              working-directory: ./backend
+              run: docker build -t weather-api:latest .
+
+            - name: Build frontend Docker image
+              if: steps.check_credentials.outputs.has_credentials == 'true'
+              working-directory: ./frontend
+              run: docker build -t weather-frontend:latest .
+
+            - name: Push images to registry
+              if: github.ref == 'refs/heads/main' && steps.check_credentials.outputs.has_credentials == 'true'
               env:
                   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
                   REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
                   REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
               run: |
-                  echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER --password-stdin
-                  docker tag myapp:latest $REGISTRY_URL/myapp:latest
-                  docker push $REGISTRY_URL/myapp:latest
+                  echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER --password-stdin $REGISTRY_URL
+                  docker tag weather-api:latest $REGISTRY_URL/weather-api:latest
+                  docker tag weather-frontend:latest $REGISTRY_URL/weather-frontend:latest
+                  docker push $REGISTRY_URL/weather-api:latest
+                  docker push $REGISTRY_URL/weather-frontend:latest
+
+            - name: Upload test and security reports
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ci-reports
+                  path: |
+                      backend/test-report.xml
+                      backend/eslint-report.json
+                      backend/ruff-report.json
+                      backend/flake8-report.json
+                      backend/htmlcov/
+                      frontend/npm-audit-report.json
+                      trivy-report.json
+                  retention-days: 30
