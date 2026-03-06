@@ -1,1 +1,1 @@
-c'est juste mon fichier de conflit :D
+c'est juste mon fichier de conflit :/
