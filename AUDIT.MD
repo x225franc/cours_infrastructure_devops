@@ -208,3 +208,4 @@ Dans le repo , on peut ajouter un template de PR pour standardiser les informati
 - puis on met des modifs dans un fichier par exemple conflit.md et on push la branche feature-branch
 - je reviens sur la main et je fais une modif dans le meme fichier conflit.md et je push la main branch
 - ensuite je tente de merger la branche feature-branch dans main et je rencontre un conflit
+- on resoud le conflit avec le merge editor de vscode / github en choisissant les modifications à garder et en supprimant les marqueurs de conflit
