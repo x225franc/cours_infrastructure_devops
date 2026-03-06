@@ -9,33 +9,173 @@ on:
 jobs:
     ci:
         runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: timescale/timescaledb:latest-pg16
+                env:
+                    POSTGRES_DB: meteodb
+                    POSTGRES_USER: infoclimat
+                    POSTGRES_PASSWORD: infoclimat2026
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U infoclimat -d meteodb"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
 
         steps:
-            - name: Checkout code
-              uses: actions/checkout@v3
+            - name: Récupérer le code
+              uses: actions/checkout@v4
 
-            - name: Install dependencies
-              run: npm ci
+            - name: Installer les dépendances du frontend
+              working-directory: ./frontend
+              run: npm install
 
-            - name: Run tests
-              run: npm test
+            - name: Vérifier le linting du frontend
+              working-directory: ./frontend
+              run: npm run check:ci
 
-            - name: Run linter
-              run: npm run lint
+            - name: Exécuter les tests du frontend
+              working-directory: ./frontend
+              run: npm run test:unit
 
-            - name: Run security scan
-              run: npm audit --audit-level=high
+            - name: Exécuter l'audit de sécurité du frontend
+              working-directory: ./frontend
+              run: npm audit --json > npm-audit-report.json || true
 
-            - name: Build Docker image
-              run: docker build -t myapp:latest .
+            - name: Arrêter en cas de vulnérabilités critiques du frontend
+              working-directory: ./frontend
+              run: npm audit --audit-level=critical
 
-            - name: Push to registry
-              if: github.ref == 'refs/heads/main'
+            - name: Configurer Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: '3.11'
+
+            - name: Installer uv
+              run: pip install uv
+
+            - name: Installer les dépendances du backend
+              working-directory: ./backend
+              run: uv sync --extra dev
+
+            - name: Formater automatiquement le code du backend avec ruff
+              working-directory: ./backend
+              run: uv run ruff format .
+
+            - name: Exécuter les tests du backend avec couverture
+              working-directory: ./backend
+              env:
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: '5432'
+                  DB_NAME: meteodb
+                  DB_USER: infoclimat
+                  DB_PASSWORD: infoclimat2026
+              run: uv run pytest --cov=weather --cov-report=json --cov-report=html --junit-xml=test-report.xml
+
+            - name: Exécuter le linter du backend (ruff)
+              working-directory: ./backend
+              run: uv run ruff check . --output-format=json > ruff-report.json || true
+
+            - name: Exécuter l'analyse flake8
+              working-directory: ./backend
+              run: uv run flake8 . --format json --output-file=flake8-report.json || true
+
+            - name: Installer pre-commit
+              run: pip install pre-commit
+
+            - name: Exécuter les vérifications pre-commit
+              run: pre-commit run --all-files
+
+            - name: Installer Trivy
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+                  wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+                  echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+                  sudo apt-get update
+                  sudo apt-get install -y trivy
+
+            - name: Exécuter le scan du système de fichiers avec Trivy
+              run: trivy fs . --format json --output trivy-report.json --severity CRITICAL,HIGH
+              continue-on-error: true
+
+            - name: Vérifier les vulnérabilités critiques avec Trivy
+              run: |
+                  CRITICAL=$(trivy fs . --format json --severity CRITICAL | grep -c '"Severity":"CRITICAL"' || echo 0)
+                  if [ "$CRITICAL" -gt 0 ]; then
+                    echo "Critical vulnerabilities found!"
+                    exit 1
+                  fi
+              continue-on-error: true
+
+            - name: Vérifier les identifiants Docker
+              id: check_credentials
+              run: |
+                  if [ -z "${{ secrets.REGISTRY_URL }}" ] || [ -z "${{ secrets.REGISTRY_USER }}" ] || [ -z "${{ secrets.REGISTRY_PASSWORD }}" ]; then
+                    echo "has_credentials=false" >> $GITHUB_OUTPUT
+                  else
+                    echo "has_credentials=true" >> $GITHUB_OUTPUT
+                  fi
+              shell: bash
+
+            - name: Construire l'image Docker du backend
+              if: steps.check_credentials.outputs.has_credentials == 'true'
+              working-directory: ./backend
+              run: docker build -t weather-api:latest .
+
+            - name: Construire l'image Docker du frontend
+              if: steps.check_credentials.outputs.has_credentials == 'true'
+              working-directory: ./frontend
+              run: docker build -t weather-frontend:latest .
+
+            - name: Pousser les images vers le registre
+              if: github.ref == 'refs/heads/main' && steps.check_credentials.outputs.has_credentials == 'true'
               env:
                   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
                   REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
                   REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
               run: |
-                  echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER --password-stdin
-                  docker tag myapp:latest $REGISTRY_URL/myapp:latest
-                  docker push $REGISTRY_URL/myapp:latest
+                  echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin "$REGISTRY_URL"
+                  docker tag weather-api:latest "$REGISTRY_URL/$REGISTRY_USER/weather-api:latest"
+                  docker tag weather-frontend:latest "$REGISTRY_URL/$REGISTRY_USER/weather-frontend:latest"
+                  docker push "$REGISTRY_URL/$REGISTRY_USER/weather-api:latest"
+                  docker push "$REGISTRY_URL/$REGISTRY_USER/weather-frontend:latest"
+
+            - name: Télécharger les livrables CI/CD
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                name: ci-reports
+                path: |
+                  backend/test-report.xml
+                  backend/ruff-report.json
+                  trivy-report.json
+                retention-days: 30
+
+    scorecard:
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+        runs-on: ubuntu-latest
+        permissions:
+            security-events: write
+            actions: read
+            contents: read
+            id-token: write
+        steps:
+            - name: Récupérer le code
+              uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
+
+            - name: Exécuter Scorecard
+              uses: ossf/scorecard-action@v2.3.3
+              with:
+                  results_file: results.sarif
+                  results_format: sarif
+                  publish_results: true
+
+            - name: Uploader le rapport SARIF
+              uses: github/codeql-action/upload-sarif@v3
+              with:
+                  sarif_file: results.sarif

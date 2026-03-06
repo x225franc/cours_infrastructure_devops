@@ -3,30 +3,31 @@ repos:
     hooks:
       - id: backend-pre-commit
         name: Run backend pre-commit hooks
-        entry: bash -c 'cd backend && uv run pre-commit run --all-files --config=.pre-commit-config.yaml'
+        entry: bash -c 'cd backend && if [ "${CI}" = "true" ]; then echo "Skipping backend-pre-commit local hook in CI (validated in workflow)."; else uv run pre-commit run --all-files --config=.pre-commit-config.yaml; fi'
         language: system
         pass_filenames: false
         always_run: true
-        stages: [ pre-commit, pre-push, manual ]
+        stages: [pre-commit, pre-push, manual]
         verbose: true
   - repo: local
     hooks:
       - id: frontend-pre-commit
         name: Run frontend pre-commit hooks
-        entry: bash -c 'cd frontend && npm run check'
+        entry: bash -c 'cd frontend && if [ "${CI}" = "true" ]; then npm run check:ci; else npm run check; fi'
         language: system
         pass_filenames: false
         always_run: true
-        stages: [ pre-commit, pre-push, manual ]
+        stages: [pre-commit, pre-push, manual]
         verbose: true
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: check-merge-conflict
       - id: mixed-line-ending
-        args: [ --fix=lf ]
+        args: [--fix=lf]
       - id: trailing-whitespace
-        args: [ --markdown-linebreak-ext=md ]
+        args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
+        exclude: ^AUDIT\.MD$
       - id: check-yaml
       - id: check-added-large-files

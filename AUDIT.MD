@@ -187,17 +187,20 @@ Tools/technologies: Trivy, npm audit.
 
 ---
 
-# Advanced Git 
+# Advanced Git
 
 ### Branch Protection
-Pour setup branch protections sur la main branch 
 
-cours_infrastructure_devops > settings > Branches > Add rule > Ruleset name : main > 
+Pour setup branch protections sur la main branch
+
+cours_infrastructure_devops > settings > Branches > Add rule > Ruleset name : main >
+
 - Require PR reviews
 - Require status checks to pass
 - Require signed commits
 
 ### PR Template
+
 Dans le repo , on peut ajouter un template de PR pour standardiser les informations fournies lors de la création d'une pull request.
 
 .github/pull_request_template.md
@@ -217,13 +220,17 @@ Dans le repo , on peut ajouter un template de PR pour standardiser les informati
 ### CI
 
 - on cree un ficher ci.yml dans .github/workflows/ pour github actions
-- a l'interieur on y rajoute la config par stage : 
-   - Installation de dépendances
-   - Exécution des tests
-   - Exécution du linter
-   - Exécution de l'analyse de sécurité
-   - Construction de l'image Docker
-   - Et push de l'image vers le registry (uniquement sur la branche main)
+- a l'interieur on y rajoute la config par stage :
+    - Installation de dépendances
+    - Exécution des tests
+    - Exécution du linter
+    - Exécution de l'analyse de sécurité
+    - Construction de l'image Docker
+    - Et push de l'image vers le registry (uniquement sur la branche main , doit etre parametrer
+      dans github > settings > secrets > new repository secret > REGISTRY_URL, REGISTRY_USERNAME et REGISTRY_PASSWORD)
 
 ### Testing the Pipeline
+
 - on casse intentionnellement un test pour vérifier que le pipeline le détecte
+- ensuite on corrige le test et on vérifie que le pipeline passe
+- enfin on ajoute un badge de CI dans le README pour afficher l'état du pipeline

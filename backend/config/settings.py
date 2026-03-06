@@ -158,6 +158,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 LOGGING = {
+    'version': 1,
     'formatters': {
         'verbose': {
             'format': '{levelname} {asctime} {module} {message}',
@@ -173,7 +174,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': 'info.log',
-            'formatter': 'verbose',  
+            'formatter': 'verbose',
         },
     },
     'loggers': {
