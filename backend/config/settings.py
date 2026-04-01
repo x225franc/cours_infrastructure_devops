@@ -117,6 +117,9 @@ STORAGES = {
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Disable automatic trailing slash appending for exact URL matching
+APPEND_SLASH = False
+
 # Django REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

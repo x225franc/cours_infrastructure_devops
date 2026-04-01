@@ -27,7 +27,5 @@ repos:
         args: [--fix=lf]
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
-      - id: end-of-file-fixer
-        exclude: ^AUDIT\.MD$
       - id: check-yaml
       - id: check-added-large-files

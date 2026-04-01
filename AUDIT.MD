@@ -215,7 +215,7 @@ Dans le repo , on peut ajouter un template de PR pour standardiser les informati
 
 ---
 
-# CI/CD Pipeline Creation
+# 3 CI/CD Pipeline Creation
 
 ### CI
 
@@ -234,3 +234,7 @@ Dans le repo , on peut ajouter un template de PR pour standardiser les informati
 - on casse intentionnellement un test pour vérifier que le pipeline le détecte
 - ensuite on corrige le test et on vérifie que le pipeline passe
 - enfin on ajoute un badge de CI dans le README pour afficher l'état du pipeline
+
+# 4 Basic Metrics Pull Architecture
+
+On rajoute prometheus dans notre compose , puis on le setup pour target notre api /metrics (pour pouvoir monitorer les metrics de l'api)
