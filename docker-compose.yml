@@ -44,12 +44,29 @@ services:
     networks:
       - app_net
       - bd_net
+    # Commande pour automatiser les migrations et lancer le serveur
+    # Note : On peut ajouter "uv run python manage.py populate_weather_data &&" avant le runserver
+    # pour peupler la base automatiquement, mais cela ralentira chaque démarrage.
+    command: >
+      sh -c "uv run python manage.py migrate &&
+            uv run python manage.py runserver 0.0.0.0:8000"
 
   frontend:
     build:
       context: ./frontend
     env_file:
       - ./.env
+    networks:
+      - app_net
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
     networks:
       - app_net
 
@@ -75,6 +92,7 @@ volumes:
     driver: local
   prometheus-data:
     driver: local
+
 networks:
   app_net:
   bd_net:

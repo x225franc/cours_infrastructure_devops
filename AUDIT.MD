@@ -1,3 +1,11 @@
+Pour lancer le projet en local , on peut utiliser la commande suivante :
+
+`docker compose up -d`
+
+puis pour peupler la bdd
+
+`docker compose exec -e DEBUG=True backend uv run python manage.py populate_weather_data`
+
 # 1 Audit du code
 
 ---
